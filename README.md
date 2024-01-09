@@ -1,1 +1,1 @@
-run setup.py
+run setup/setup.py
