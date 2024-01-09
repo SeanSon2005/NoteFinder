@@ -1,0 +1,13 @@
+import os
+os.system("pip install -r setup/requirements.txt")
+os.system("mkdir base_images")
+os.system("mkdir base_labels")
+os.system('mkdir -p data\\test')
+os.system('mkdir -p data\\train')
+os.system('mkdir -p data\\valid')
+os.system("mkdir data\\test\\labels")
+os.system("mkdir data\\test\\images")
+os.system("mkdir data\\train\\labels")
+os.system("mkdir data\\train\\images")
+os.system("mkdir data\\valid\\labels")
+os.system("mkdir data\\valid\\images")
