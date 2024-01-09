@@ -42,7 +42,7 @@ def findNote(img, model, show=True):
 
 if __name__ == '__main__':
     # load model
-    conv_model = YOLO('best.onnx')
+    conv_model = YOLO('best.pth')
     conv_model.info()
 
     # define camera
