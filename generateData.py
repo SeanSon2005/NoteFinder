@@ -7,6 +7,7 @@ import cv2
 import skimage.exposure
 from numpy.random import default_rng
 from tqdm.auto import tqdm
+import noteRenderer
 
 # Define folder locations
 IMAGE_FOLDER = "base_images"
@@ -20,12 +21,12 @@ N = 1 # total image count will be N * CORE_COUNT!
 CORE_COUNT = 20  # the number of logical processors in your system
 RES = (1280, 720, 3)
 
-def generate_noisy_image():
+def generate_noisy_image(noise_intensity, blur_factor):
     # create random noise image
     rng = default_rng()
-    noise = rng.integers(0, 70, (RES[1],RES[0]), np.uint8, True)
+    noise = rng.integers(0, noise_intensity, (RES[1],RES[0]), np.uint8, True)
     # blur the noise
-    blur = cv2.GaussianBlur(noise, (0,0), sigmaX=25, sigmaY=25, borderType = cv2.BORDER_DEFAULT)
+    blur = cv2.GaussianBlur(noise, (0,0), sigmaX=blur_factor, sigmaY=blur_factor, borderType = cv2.BORDER_DEFAULT)
     # stretch the image and threshold
     stretch = skimage.exposure.rescale_intensity(blur, in_range='image', out_range=(0,255)).astype(np.uint8)
     thresh = cv2.threshold(stretch, 175, 255, cv2.THRESH_BINARY)[1]
@@ -37,12 +38,16 @@ def generate_noisy_image():
 
 def generate_image(index):
     # generate background image
-    img = generate_noisy_image()
+    img = generate_noisy_image(60,25)
 
     # generating NOTES
     num_notes = np.random.randint(0,3)
-    for i in range(num_notes):
-        pass # bruh I don't want to render a donut...
+
+    with open(LABELS_FOLDER + '/Image'+str(index)+'.txt','w') as file:
+        for i in range(num_notes):
+            img,x,y,size = noteRenderer.renderNote(img)
+            file.write('0 ' + str(x/RES[0]) + ' ' + str(y/RES[1]) + ' ' + str(size/RES[0]) + ' ' + str(size/RES[1]) + '\n')
+        file.close()
     
     # save image
     cv2.imwrite(filename=IMAGE_FOLDER+"/Image"+str(index)+".png",img=img)
