@@ -27,10 +27,9 @@ def findNote(img, model):
         for box in boxes:
             x1, y1, x2, y2 = box.xyxy[0]
             x, y = int((x1 + x2) / 2), int((y1 + y2) / 2)
+            cv2.line(img,(x,int(y1)),(x,int(y2)),color=(255,0,0),thickness=10)
+            cv2.line(img,(int(x1),y),(int(x2),y),color=(255,0,0),thickness=10)
             centers.append((x,y))
-
-    for center in centers:
-        cv2.circle(img,center=center,radius=4,color=(255,0,0))
 
     # handle center point list data
     sendData(centers)
