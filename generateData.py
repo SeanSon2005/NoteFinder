@@ -7,7 +7,6 @@ import cv2
 import skimage.exposure
 from numpy.random import default_rng
 from tqdm.auto import tqdm
-import noteRenderer
 
 # Define folder locations
 IMAGE_FOLDER = "base_images"
@@ -17,18 +16,47 @@ BASE_LABELS = glob.glob(LABELS_FOLDER+'/*')
 
 # Constants
 TRAINING = 0.85 # percent of data to be training
-N = 1 # total image count will be N * CORE_COUNT!
-CORE_COUNT = 20  # the number of logical processors in your system
-RES = (1280, 720, 3)
+N = 200 # total image count will be N * CORE_COUNT!
+CORE_COUNT = 24  # the number of logical processors in your system
+RES = (1280, 720, 3) # Resolution of OUTPUT images
+NOISE_SPARSE = 100 # EVERY 1 in NOISE_SPARSE pixels will be noise
+EROSION_KERNEL_SIZE = 5 # Proportionally influences the size of 
+                        # the "holes" the noise generator makes
+HOLE_BLUR_FACTOR = 21 # Kernel size of gaussian blur after erosion
 
-def generate_noisy_image(noise_intensity, blur_factor):
+# Renders a note
+def renderNote(img,rng):
+    height, width = img.shape
+    size = rng.integers(40, 150)
+    stretch = rng.random() + 1
+    sizeX = int(size * stretch)
+    sizeY = int(size / stretch)
+    centerX = rng.integers(0, width)
+    centerY = rng.integers(0, height)
+    cv2.ellipse(img=img,
+                center=(centerX,centerY),
+                axes=(sizeX, sizeY),
+                angle=rng.integers(-45, 46),
+                startAngle=0,
+                endAngle=360,
+                color=255,
+                thickness=int(size/4))
+
+    return img, centerX, centerY, sizeX, sizeY
+
+# Generates a black image with white blobs as noise
+def generate_noisy_image(noise_intensity, blur_factor, rng):
     # create random noise image
-    rng = default_rng()
     noise = rng.integers(0, noise_intensity, (RES[1],RES[0]), np.uint8, True)
     # blur the noise
-    blur = cv2.GaussianBlur(noise, (0,0), sigmaX=blur_factor, sigmaY=blur_factor, borderType = cv2.BORDER_DEFAULT)
+    blur = cv2.GaussianBlur(noise, (0,0), 
+                            sigmaX=blur_factor, 
+                            sigmaY=blur_factor, 
+                            borderType = cv2.BORDER_DEFAULT)
     # stretch the image and threshold
-    stretch = skimage.exposure.rescale_intensity(blur, in_range='image', out_range=(0,255)).astype(np.uint8)
+    stretch = skimage.exposure.rescale_intensity(blur, 
+                                                 in_range='image', 
+                                                 out_range=(0,255)).astype(np.uint8)
     thresh = cv2.threshold(stretch, 175, 255, cv2.THRESH_BINARY)[1]
     # masking
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
@@ -36,24 +64,48 @@ def generate_noisy_image(noise_intensity, blur_factor):
     result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel)
     return result
 
+# Generates the training image
 def generate_image(index):
+    # set the default rng
+    rng = default_rng()
+
     # generate background image
-    img = generate_noisy_image(60,25)
+    img = generate_noisy_image(70,25,rng)
 
-    # generating NOTES
-    num_notes = np.random.randint(0,3)
-
+    # generating NOTES (record labels as well)
+    num_notes = rng.integers(0, 4)
     with open(LABELS_FOLDER + '/Image'+str(index)+'.txt','w') as file:
         for i in range(num_notes):
-            img,x,y,size = noteRenderer.renderNote(img)
-            file.write('0 ' + str(x/RES[0]) + ' ' + str(y/RES[1]) + ' ' + str(size/RES[0]) + ' ' + str(size/RES[1]) + '\n')
+            img,x,y,sizeX,sizeY = renderNote(img,rng)
+            file.write('0 ' + str(x/RES[0]) + ' ' + 
+                       str(y/RES[1]) + ' ' + 
+                       str((sizeX*2)/RES[0]) + ' ' + 
+                       str((sizeY*2)/RES[1]) + '\n')
         file.close()
-    
+
+    # add REALISTIC noise to blobs and notes
+    noise = rng.integers(0, NOISE_SPARSE, (RES[1],RES[0]), np.uint8, True)
+    noise = cv2.threshold(noise, NOISE_SPARSE-1, 255, cv2.THRESH_BINARY)[1]
+    img = np.maximum(img - noise, 0)
+    img = cv2.erode(img, 
+                    np.ones((EROSION_KERNEL_SIZE, EROSION_KERNEL_SIZE), 
+                                 np.uint8)) 
+    img = cv2.GaussianBlur(img, 
+                           (HOLE_BLUR_FACTOR,HOLE_BLUR_FACTOR),
+                           0)
+    img = cv2.threshold(img, 
+                        (100 + rng.integers(0,60)), 
+                        255, 
+                        cv2.THRESH_BINARY)[1]
+
+    # add dots of white in background
+    # im lazy I'll do this later
+
     # save image
     cv2.imwrite(filename=IMAGE_FOLDER+"/Image"+str(index)+".png",img=img)
 
+# Main Function
 if __name__ == '__main__':
-
     for f in BASE_IMAGES:
         os.remove(f)
     for f in BASE_LABELS:
@@ -70,34 +122,3 @@ if __name__ == '__main__':
     finally:
         pool.close()
         pool.join()
-
-    # spread data
-    print("Splitting data...")
-    total_num = len(BASE_IMAGES)
-    training_num = int(total_num * TRAINING)
-
-    # # clear previous folders
-    # files = glob.glob('data/train/images/*')
-    # for f in files:
-    #     os.remove(f)
-    # files = glob.glob('data/valid/images/*')
-    # for f in files:
-    #     os.remove(f)
-    # files = glob.glob('data/train/labels/*')
-    # for f in files:
-    #     os.remove(f)
-    # files = glob.glob('data/valid/labels/*')
-    # for f in files:
-    #     os.remove(f)
-
-    # for i, file in enumerate(BASE_IMAGES):
-    #     if i < training_num:
-    #         shutil.move(file, "data/train/images")
-    #     else:
-    #         shutil.move(file, "data/valid/images")
-
-    # for i, file in enumerate(BASE_LABELS):
-    #     if i < training_num:
-    #         shutil.move(file, "data/train/labels")
-    #     else:
-    #         shutil.move(file, "data/valid/labels")

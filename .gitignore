@@ -3,3 +3,5 @@ base_labels
 data/test
 data/train
 data/valid
+runs
+yolov8n.pt

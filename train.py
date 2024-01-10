@@ -7,4 +7,5 @@ if LOAD_FROM_PREV:
 else:
     model = YOLO('yolov8n.yaml')
 
-model.train(data='data/model.yaml', epochs=30, imgsz=640)
+model.train(data='data/model.yaml', epochs=40, imgsz=640)
+
