@@ -4,7 +4,7 @@ import time
 from ultralytics import YOLO
 
 # define color bounds
-LOWER = np.array([10, 180, 50])
+LOWER = np.array([5, 80, 50])
 UPPER = np.array([35, 255, 255])
 
 # send data to NetworkTables
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         ret, frame = cap.read()
 
         img = findNote(frame, conv_model)
-        print(img)
+        cv2.imshow("video", img)
 
         if cv2.waitKey(1) == 27:
             break

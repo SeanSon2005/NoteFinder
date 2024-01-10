@@ -20,7 +20,7 @@ def findNote(img, model):
     cv2.imwrite("imageMask.png",mask)
 
     # run model
-    results = model(mask, verbose=False, conf=0.5)
+    results = model(mask, verbose=False, conf=0.6)
 
     # retrieve center from boxes
     centers = []
@@ -29,10 +29,9 @@ def findNote(img, model):
         for box in boxes:
             x1, y1, x2, y2 = box.xyxy[0]
             x, y = int((x1 + x2) / 2), int((y1 + y2) / 2)
+            cv2.line(img,(x,int(y1)),(x,int(y2)),color=(255,0,0),thickness=10)
+            cv2.line(img,(int(x1),y),(int(x2),y),color=(255,0,0),thickness=10)
             centers.append((x,y))
-
-    for center in centers:
-        cv2.circle(img,center=center,radius=10,color=(255,0,0),thickness=-1)
 
     # handle center point list data
     sendData(centers)
@@ -44,7 +43,7 @@ if __name__ == '__main__':
     conv_model = YOLO('best.pt')
     conv_model.info()
 
-    img = cv2.imread('note.jpg')
+    img = cv2.imread('note2.jpg')
 
     img = findNote(img, conv_model)
 

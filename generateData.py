@@ -23,7 +23,7 @@ NOISE_SPARSE = 100 # EVERY 1 in NOISE_SPARSE pixels will be noise
 EROSION_KERNEL_SIZE = 5 # Proportionally influences the size of 
                         # the "holes" the noise generator makes
 HOLE_BLUR_FACTOR = 21 # Kernel size of gaussian blur after erosion
-USE_SEED = True
+USE_SEED = False
 
 # Renders a note
 def renderNote(img,rng):
@@ -74,7 +74,7 @@ def generate_image(index):
         rng = default_rng()
 
     # generate background image
-    img = generate_noisy_image(rng.integers(80,120),25,rng)
+    img = generate_noisy_image(150,25,rng)
 
     # generating NOTES (record labels as well)
     num_notes = rng.integers(0, 4)
@@ -109,6 +109,9 @@ def generate_image(index):
                             borderType = cv2.BORDER_DEFAULT)
     mask = cv2.threshold(mask, 129, 255, cv2.THRESH_BINARY)[1]
     noise = rng.integers(0, 255, (RES[1],RES[0]), np.uint8, True)
+    noise = cv2.dilate(noise,
+                       np.ones((3,3),
+                               np.uint8))
     noise = cv2.threshold(noise, 250, 255, cv2.THRESH_BINARY)[1]
     noise_final = cv2.bitwise_and(noise,mask)
     img = np.minimum(img + noise_final, 255)
