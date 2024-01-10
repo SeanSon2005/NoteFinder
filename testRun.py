@@ -44,7 +44,7 @@ if __name__ == '__main__':
     conv_model = YOLO('best.pt')
     conv_model.info()
 
-    img = cv2.imread('note2.jpg')
+    img = cv2.imread('note.jpg')
 
     img = findNote(img, conv_model)
 

@@ -16,18 +16,19 @@ BASE_LABELS = glob.glob(LABELS_FOLDER+'/*')
 
 # Constants
 TRAINING = 0.85 # percent of data to be training
-N = 200 # total image count will be N * CORE_COUNT!
+N = 300 # total image count will be N * CORE_COUNT!
 CORE_COUNT = 24  # the number of logical processors in your system
 RES = (1280, 720, 3) # Resolution of OUTPUT images
 NOISE_SPARSE = 100 # EVERY 1 in NOISE_SPARSE pixels will be noise
 EROSION_KERNEL_SIZE = 5 # Proportionally influences the size of 
                         # the "holes" the noise generator makes
 HOLE_BLUR_FACTOR = 21 # Kernel size of gaussian blur after erosion
+USE_SEED = True
 
 # Renders a note
 def renderNote(img,rng):
     height, width = img.shape
-    size = rng.integers(40, 150)
+    size = rng.integers(40, 250)
     stretch = rng.random() + 1
     sizeX = int(size * stretch)
     sizeY = int(size / stretch)
@@ -40,7 +41,7 @@ def renderNote(img,rng):
                 startAngle=0,
                 endAngle=360,
                 color=255,
-                thickness=int(size/4))
+                thickness=int(size/2))
 
     return img, centerX, centerY, sizeX, sizeY
 
@@ -67,10 +68,13 @@ def generate_noisy_image(noise_intensity, blur_factor, rng):
 # Generates the training image
 def generate_image(index):
     # set the default rng
-    rng = default_rng()
+    if USE_SEED:
+        rng = default_rng(index)
+    else:
+        rng = default_rng()
 
     # generate background image
-    img = generate_noisy_image(70,25,rng)
+    img = generate_noisy_image(rng.integers(80,120),25,rng)
 
     # generating NOTES (record labels as well)
     num_notes = rng.integers(0, 4)
@@ -97,9 +101,17 @@ def generate_image(index):
                         (100 + rng.integers(0,60)), 
                         255, 
                         cv2.THRESH_BINARY)[1]
-
-    # add dots of white in background
-    # im lazy I'll do this later
+    # add REALISTIC background grain noise
+    mask_noise = rng.integers(0, 255, (RES[1],RES[0]), np.uint8, True)
+    mask = cv2.GaussianBlur(mask_noise, (0,0), 
+                            sigmaX=20, 
+                            sigmaY=20, 
+                            borderType = cv2.BORDER_DEFAULT)
+    mask = cv2.threshold(mask, 129, 255, cv2.THRESH_BINARY)[1]
+    noise = rng.integers(0, 255, (RES[1],RES[0]), np.uint8, True)
+    noise = cv2.threshold(noise, 250, 255, cv2.THRESH_BINARY)[1]
+    noise_final = cv2.bitwise_and(noise,mask)
+    img = np.minimum(img + noise_final, 255)
 
     # save image
     cv2.imwrite(filename=IMAGE_FOLDER+"/Image"+str(index)+".png",img=img)
