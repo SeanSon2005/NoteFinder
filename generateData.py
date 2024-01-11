@@ -20,7 +20,7 @@ N = 300 # total image count will be N * CORE_COUNT!
 CORE_COUNT = 24  # the number of logical processors in your system
 RES = (1280, 720, 3) # Resolution of OUTPUT images
 NOISE_SPARSE = 100 # EVERY 1 in NOISE_SPARSE pixels will be noise
-EROSION_KERNEL_SIZE = 5 # Proportionally influences the size of 
+EROSION_KERNEL_SIZE = 4 # Proportionally influences the size of 
                         # the "holes" the noise generator makes
 HOLE_BLUR_FACTOR = 21 # Kernel size of gaussian blur after erosion
 USE_SEED = False
@@ -28,7 +28,7 @@ USE_SEED = False
 # Renders a note
 def renderNote(img,rng):
     height, width = img.shape
-    size = rng.integers(40, 250)
+    size = rng.integers(20, 250)
     stretch = rng.random() + 1
     sizeX = int(size * stretch)
     sizeY = int(size / stretch)
@@ -41,7 +41,7 @@ def renderNote(img,rng):
                 startAngle=0,
                 endAngle=360,
                 color=255,
-                thickness=int(size/2))
+                thickness=int(size/3))
 
     return img, centerX, centerY, sizeX, sizeY
 
@@ -74,7 +74,7 @@ def generate_image(index):
         rng = default_rng()
 
     # generate background image
-    img = generate_noisy_image(150,25,rng)
+    img = generate_noisy_image(150,30,rng)
 
     # generating NOTES (record labels as well)
     num_notes = rng.integers(0, 4)
@@ -104,10 +104,13 @@ def generate_image(index):
     # add REALISTIC background grain noise
     mask_noise = rng.integers(0, 255, (RES[1],RES[0]), np.uint8, True)
     mask = cv2.GaussianBlur(mask_noise, (0,0), 
-                            sigmaX=20, 
-                            sigmaY=20, 
+                            sigmaX=30, 
+                            sigmaY=30, 
                             borderType = cv2.BORDER_DEFAULT)
-    mask = cv2.threshold(mask, 129, 255, cv2.THRESH_BINARY)[1]
+    mask = skimage.exposure.rescale_intensity(mask, 
+                                                 in_range='image', 
+                                                 out_range=(0,255)).astype(np.uint8)
+    mask = cv2.threshold(mask, 175, 255, cv2.THRESH_BINARY)[1]
     noise = rng.integers(0, 255, (RES[1],RES[0]), np.uint8, True)
     noise = cv2.dilate(noise,
                        np.ones((3,3),

@@ -4,8 +4,8 @@ import time
 from ultralytics import YOLO
 
 # define color bounds
-LOWER = np.array([5, 80, 50])
-UPPER = np.array([35, 255, 255])
+LOWER = np.array([5, 50, 50])
+UPPER = np.array([15, 255, 255])
 
 # send data to NetworkTables
 def sendData(data):
