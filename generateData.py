@@ -16,7 +16,7 @@ BASE_LABELS = glob.glob(LABELS_FOLDER+'/*')
 
 # Constants
 TRAINING = 0.85 # percent of data to be training
-N = 300 # total image count will be N * CORE_COUNT!
+N = 400 # total image count will be N * CORE_COUNT!
 CORE_COUNT = 24  # the number of logical processors in your system
 RES = (1280, 720, 3) # Resolution of OUTPUT images
 NOISE_SPARSE = 100 # EVERY 1 in NOISE_SPARSE pixels will be noise
@@ -28,7 +28,7 @@ USE_SEED = False
 # Renders a note
 def renderNote(img,rng):
     height, width = img.shape
-    size = rng.integers(20, 250)
+    size = rng.integers(20, 240)
     stretch = rng.random() + 1
     sizeX = int(size * stretch)
     sizeY = int(size / stretch)
@@ -37,33 +37,13 @@ def renderNote(img,rng):
     cv2.ellipse(img=img,
                 center=(centerX,centerY),
                 axes=(sizeX, sizeY),
-                angle=rng.integers(-45, 46),
+                angle=rng.integers(-15, 15),
                 startAngle=0,
                 endAngle=360,
                 color=255,
                 thickness=int(size/3))
 
     return img, centerX, centerY, sizeX, sizeY
-
-# Generates a black image with white blobs as noise
-def generate_noisy_image(noise_intensity, blur_factor, rng):
-    # create random noise image
-    noise = rng.integers(0, noise_intensity, (RES[1],RES[0]), np.uint8, True)
-    # blur the noise
-    blur = cv2.GaussianBlur(noise, (0,0), 
-                            sigmaX=blur_factor, 
-                            sigmaY=blur_factor, 
-                            borderType = cv2.BORDER_DEFAULT)
-    # stretch the image and threshold
-    stretch = skimage.exposure.rescale_intensity(blur, 
-                                                 in_range='image', 
-                                                 out_range=(0,255)).astype(np.uint8)
-    thresh = cv2.threshold(stretch, 175, 255, cv2.THRESH_BINARY)[1]
-    # masking
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9,9))
-    result = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
-    result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel)
-    return result
 
 # Generates the training image
 def generate_image(index):
@@ -74,7 +54,7 @@ def generate_image(index):
         rng = default_rng()
 
     # generate background image
-    img = generate_noisy_image(150,30,rng)
+    img = np.zeros((RES[1],RES[0]))
 
     # generating NOTES (record labels as well)
     num_notes = rng.integers(0, 4)
@@ -104,8 +84,8 @@ def generate_image(index):
     # add REALISTIC background grain noise
     mask_noise = rng.integers(0, 255, (RES[1],RES[0]), np.uint8, True)
     mask = cv2.GaussianBlur(mask_noise, (0,0), 
-                            sigmaX=30, 
-                            sigmaY=30, 
+                            sigmaX=35, 
+                            sigmaY=35, 
                             borderType = cv2.BORDER_DEFAULT)
     mask = skimage.exposure.rescale_intensity(mask, 
                                                  in_range='image', 
@@ -115,9 +95,24 @@ def generate_image(index):
     noise = cv2.dilate(noise,
                        np.ones((3,3),
                                np.uint8))
-    noise = cv2.threshold(noise, 250, 255, cv2.THRESH_BINARY)[1]
+    noise = cv2.threshold(noise, 240, 255, cv2.THRESH_BINARY)[1]
     noise_final = cv2.bitwise_and(noise,mask)
     img = np.minimum(img + noise_final, 255)
+
+    # create random noise image
+    blob_noise = rng.integers(0, 255, (RES[1],RES[0]), np.uint8, True)
+    blur = cv2.GaussianBlur(blob_noise, (0,0),
+                            sigmaX=35,
+                            sigmaY=35,
+                            borderType = cv2.BORDER_DEFAULT)
+    stretch = skimage.exposure.rescale_intensity(blur, 
+                                                 in_range='image', 
+                                                 out_range=(0,255)).astype(np.uint8)
+    thresh = cv2.threshold(stretch, 175, 255, cv2.THRESH_BINARY)[1]
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
+    result = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+    result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel)
+    img = np.minimum(img + result, 255)
 
     # save image
     cv2.imwrite(filename=IMAGE_FOLDER+"/Image"+str(index)+".png",img=img)
