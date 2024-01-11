@@ -16,19 +16,19 @@ BASE_LABELS = glob.glob(LABELS_FOLDER+'/*')
 
 # Constants
 TRAINING = 0.85 # percent of data to be training
-N = 400 # total image count will be N * CORE_COUNT!
+N = 200 # total image count will be N * CORE_COUNT!
 CORE_COUNT = 24  # the number of logical processors in your system
 RES = (1280, 720, 3) # Resolution of OUTPUT images
 NOISE_SPARSE = 100 # EVERY 1 in NOISE_SPARSE pixels will be noise
 EROSION_KERNEL_SIZE = 4 # Proportionally influences the size of 
                         # the "holes" the noise generator makes
-HOLE_BLUR_FACTOR = 21 # Kernel size of gaussian blur after erosion
+HOLE_BLUR_FACTOR = 27 # Kernel size of gaussian blur after erosion
 USE_SEED = False
 
 # Renders a note
 def renderNote(img,rng):
     height, width = img.shape
-    size = rng.integers(20, 240)
+    size = rng.integers(20, 220)
     stretch = rng.random() + 1
     sizeX = int(size * stretch)
     sizeY = int(size / stretch)
@@ -41,7 +41,7 @@ def renderNote(img,rng):
                 startAngle=0,
                 endAngle=360,
                 color=255,
-                thickness=int(size/3))
+                thickness=int(size/2.8))
 
     return img, centerX, centerY, sizeX, sizeY
 
@@ -102,8 +102,8 @@ def generate_image(index):
     # create random noise image
     blob_noise = rng.integers(0, 255, (RES[1],RES[0]), np.uint8, True)
     blur = cv2.GaussianBlur(blob_noise, (0,0),
-                            sigmaX=35,
-                            sigmaY=35,
+                            sigmaX=40,
+                            sigmaY=40,
                             borderType = cv2.BORDER_DEFAULT)
     stretch = skimage.exposure.rescale_intensity(blur, 
                                                  in_range='image', 
