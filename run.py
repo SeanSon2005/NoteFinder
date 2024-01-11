@@ -17,6 +17,7 @@ def findNote(img, model):
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, LOWER, UPPER)
     mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB)
+    cv2.imshow("mask",mask)
     # run model
     results = model(mask, verbose=False)
 
